@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A public-safe research paper on prioritizing content-refresh review with anonymized FlyRank data.">
+  <title>Which content should a reviewer refresh first?</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <p class="eyebrow">Applied search intelligence · research paper</p>
+      <h1>Which content should a reviewer refresh first?</h1>
+      <p class="dek">A client-held-out comparison of a transparent rule and a learned ranking model for content-refresh review.</p>
+      <p class="byline">Omar Hisham · August 2026 · <a href="https://github.com/justqwertty/flyrankAssignment1">Repository</a></p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <nav aria-label="Paper sections"><a href="#abstract">Abstract</a><a href="#data">Data</a><a href="#method">Method</a><a href="#results">Results</a><a href="#recommendations">Playbook</a></nav>
+
+    <section id="abstract">
+      <h2>Abstract</h2>
+      <p>Given limited reviewer capacity, which existing content items should be reviewed first for a potential refresh? I evaluated a transparent weighted rule and three learned classifiers on an anonymized 30,000-item FlyRank starter release, then used their scores only to rank a review queue. The primary comparison uses a client-held-out test set and Precision@50, so every model and the baseline are judged on the same unseen items. The selected random forest measured Precision@50 of 0.74 versus 0.24 for the rule baseline, while the held-out declining-label base rate was 0.54. This is decision-support evidence for triaging human review against this proxy label—not evidence that a refresh causes traffic recovery or that the model predicts a search engine’s ranking system.</p>
+    </section>
+
+    <section>
+      <h2>Introduction / problem statement</h2>
+      <p>A content team may only have 50 review slots in a cycle. The useful output is therefore not an automatic publishing decision; it is a ranked shortlist with reasons a reviewer can inspect. A false positive consumes limited editorial time, while a false negative can leave a declining item unnoticed. I frame the task as ranking items for review and use Precision@50—the share of worthwhile candidates among the first 50—as the decision-aligned metric.</p>
+    </section>
+
+    <section id="data">
+      <h2>Data</h2>
+      <p>This paper uses the repository’s bundled anonymized FlyRank ML Internship starter release: 30,000 pseudonymized content items across 32 pseudonymized clients. One row represents one content item; activity fields are trailing-90-day aggregates, with recent and preceding 30-day comparison windows embedded in the release. The full internship warehouse is approximately 79 million daily-performance rows, but its aggregate results are <em>not</em> claimed here.</p>
+      <p>I retained observable search, engagement, content-age, freshness, length, and broad content-context fields. I excluded client and content identifiers from features (they are used only for grouping the split), and excluded titles, domains, URLs, keywords, raw queries, provider/model fields, product decision flags, <code>trend_direction</code>, <code>trend_pct</code>, and all current-window outcome columns. The last set would reconstruct the label and create leakage.</p>
+      <aside><strong>Public-safety note.</strong> This page contains aggregate metrics only. It deliberately contains no client names, domains, URLs, titles, raw queries, or row-level records.</aside>
+    </section>
+
+    <section id="method">
+      <h2>Methodology</h2>
+      <h3>Label and assumptions</h3>
+      <p>The proxy label is <code>is_declining_label</code>: 1 when the release’s <code>trend_direction</code> is “down,” defined as a more than 20% decline in impressions between its two embedded 30-day windows. It is a contemporaneous, rule-defined proxy—not a future outcome—and must not be mistaken for a causal measure of refresh value.</p>
+      <h3>Features and baseline</h3>
+      <p>The model uses 18 numeric signals (including log-transformed traffic totals, position, age, freshness, CTR, engagement, and scroll rate) and eight categorical/bucketed signals; one-hot encoding yields 52 columns. Missing numeric values are filled with zero and missing categories with “unknown,” matching the reproducible pipeline. The transparent baseline is a weighted score: 40% visibility, 30% freshness risk, 25% position opportunity, and 5% content-depth gap.</p>
+      <h3>Validation and leakage checks</h3>
+      <p>A fixed-seed (42) client-held-out split reserves whole pseudonymized clients for test, leaving 27,675 training rows and 2,325 test rows. Logistic regression, a constrained decision tree, and a random forest are fit on the training partition; selection is by held-out Precision@50. The baseline is scored on that identical test partition. I explicitly excluded label-derived direction/percentage fields and recent-window columns; a deliberate leak test previously drove scores toward perfect, confirming the audit can detect this failure mode.</p>
+    </section>
+
+    <section id="results">
+      <h2>Results</h2>
+      <p>The random forest was selected on the held-out split. Its lift is meaningful for the queueing task, but it comes from one fixed split and a proxy label; the result should be treated as measured within this release, not as a universal production benchmark.</p>
+      <figure aria-labelledby="comparison-caption">
+        <div class="bar-chart" role="img" aria-label="Precision at 50: baseline 0.24, logistic regression 0.40, decision tree 0.62, random forest 0.74; base rate 0.54.">
+          <div class="bar-row"><span>Rule baseline</span><i style="--v:24%">0.24</i></div>
+          <div class="bar-row"><span>Logistic regression</span><i style="--v:40%">0.40</i></div>
+          <div class="bar-row"><span>Decision tree</span><i style="--v:62%">0.62</i></div>
+          <div class="bar-row best"><span>Random forest</span><i style="--v:74%">0.74</i></div>
+          <div class="bar-row rate"><span>Test base rate</span><i style="--v:54%">0.54</i></div>
+        </div>
+        <figcaption id="comparison-caption"><strong>Figure 1.</strong> Held-out Precision@50. Higher is better; the base rate provides context for a 50-item shortlist.</figcaption>
+      </figure>
+      <div class="table-wrap"><table><caption>Same client-held-out test split</caption><thead><tr><th>Approach</th><th>ROC AUC</th><th>Average precision</th><th>Precision@50</th><th>F1</th></tr></thead><tbody><tr><td>Rule baseline</td><td>0.627</td><td>0.468</td><td>0.240</td><td>0.274</td></tr><tr><td>Logistic regression</td><td>0.700</td><td>0.522</td><td>0.400</td><td>0.566</td></tr><tr><td>Decision tree</td><td>0.742</td><td>0.575</td><td>0.620</td><td>0.634</td></tr><tr class="selected"><td>Random forest</td><td>0.750</td><td>0.618</td><td>0.740</td><td>0.640</td></tr></tbody></table></div>
+      <figure aria-labelledby="features-caption">
+        <div class="feature-grid" role="img" aria-label="Top random forest feature importances: days with impressions 0.158, log impressions 90 days 0.129, average position 0.109, content age days 0.095, character count 0.043, word count 0.040.">
+          <div><span>Days with impressions</span><b style="--v:100%">0.158</b></div><div><span>Log impressions (90d)</span><b style="--v:82%">0.129</b></div><div><span>Average position</span><b style="--v:69%">0.109</b></div><div><span>Content age (days)</span><b style="--v:60%">0.095</b></div><div><span>Character count</span><b style="--v:27%">0.043</b></div><div><span>Word count</span><b style="--v:25%">0.040</b></div>
+        </div>
+        <figcaption id="features-caption"><strong>Figure 2.</strong> Top random-forest impurity importances. They indicate which inputs the model used, not causal effects or editorial prescriptions.</figcaption>
+      </figure>
+    </section>
+
+    <section>
+      <h2>Limitations &amp; honest framing</h2>
+      <ul><li>The label is derived from overlapping historical windows, so the model ranks similarity to a definition of decline; it does not forecast a future recovery or prove that a page needs editing.</li><li>One client-held-out split, one seed, and 2,325 test rows do not quantify uncertainty. Repeated grouped splits or time-forward validation are required before a firm model-selection claim.</li><li>Feature importance is associational. It must not be interpreted as a causal explanation of search performance.</li><li>The result is from the 30,000-row teaching slice. It does not generalize automatically to the ~79M-row warehouse, other clients, or a changing search environment.</li><li>Human context—brand, accuracy, seasonality, compliance, and editorial quality—remains outside the model and must govern every action.</li></ul>
+    </section>
+
+    <section id="recommendations">
+      <h2>Ranked recommendations</h2>
+      <ol><li><strong>Run a human review of the top 50 random-forest candidates first.</strong> On this split, 37 of 50 carried the proxy decline label, versus 12 of 50 for the rule baseline.</li><li><strong>Use reason codes to route the review, not to automate it.</strong> Prioritize refresh, then CTR/engagement review, and send all proposed changes through editorial verification.</li><li><strong>Keep the transparent baseline as a fallback and monitoring control.</strong> It gives reviewers an inspectable counterfactual queue and catches operational drift.</li><li><strong>Validate prospectively before production use.</strong> Freeze features at a decision date, wait for a future outcome window, and compare reviewer outcomes across repeated client/time splits.</li><li><strong>Retrain only after monitoring changes in base rate, Precision@50, and feature distributions.</strong> A model that stops outperforming the baseline becomes a review aid to retire, not a result to defend.</li></ol>
+    </section>
+
+    <section>
+      <h2>Reproducibility</h2>
+      <p>The analysis is reproducible from the public repository’s bundled anonymized starter slice. Run <code>pip install -r requirements.txt</code>, then <code>python scripts/run_all.py</code>; the pipeline writes the model comparison and charts used above. The paper mirror is <a href="https://github.com/justqwertty/flyrankAssignment1/blob/main/work/notebooks/capstone.ipynb">work/notebooks/capstone.ipynb</a>; supporting notebooks document framing, leakage review, modeling, validation, and the action playbook under <a href="https://github.com/justqwertty/flyrankAssignment1/tree/main/work/notebooks">work/notebooks</a>. The model seed is 42.</p>
+    </section>
+  </main>
+  <footer><div class="wrap"><h2>Acknowledgments &amp; data credit</h2><p>Built on the <a href="https://flyrank.ai">FlyRank ML Internship dataset</a>. Thanks to FlyRank for the anonymized teaching release and the internship framework.</p></div></footer>
+</body>
+</html>
