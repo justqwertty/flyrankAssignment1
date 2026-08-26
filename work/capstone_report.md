@@ -7,11 +7,11 @@
 
 ## Abstract
 
-Given limited reviewer capacity, which existing content items should be reviewed first for a potential refresh? I evaluated a transparent weighted rule and three learned classifiers on an anonymized 30,000-item FlyRank starter release, then used their scores only to rank a review queue. The primary comparison uses a client-held-out test set and Precision@50, so every model and the baseline are judged on the same unseen items. The selected random forest measured Precision@50 of 0.74 versus 0.24 for the rule baseline, while the held-out declining-label base rate was 0.54. This is decision-support evidence for triaging human review against this proxy label—not evidence that a refresh causes traffic recovery or that the model predicts a search engine's ranking system.
+FlyRank’s content-review problem is a simple operational constraint: a reviewer cannot inspect every existing item in a cycle, so which ones should come first? I evaluated a transparent weighted rule and three learned classifiers on an anonymized 30,000-item FlyRank starter release, then used their scores only to rank a review queue. The primary comparison uses a client-held-out test set and Precision@50, so every model and the baseline are judged on the same unseen items. The selected random forest measured Precision@50 of 0.74 versus 0.24 for the rule baseline, while the held-out declining-label base rate was 0.54. This is decision-support evidence for helping a FlyRank content reviewer triage an auditable shortlist against this proxy label—not evidence that a refresh causes traffic recovery or that the model predicts a search engine's ranking system.
 
 ## Introduction / problem statement
 
-The decision is which items receive one of roughly 50 manual review slots. The queue is a reviewer aid, never an automatic publishing decision; false positives waste editorial time and false negatives may leave a potential decline unnoticed. Precision@50 is the primary metric because it measures the quality of the finite shortlist.
+This FlyRank content-operations case study addresses the decision of which items receive one of roughly 50 manual review slots. The queue is a reviewer aid, never an automatic publishing decision; false positives waste editorial time and false negatives may leave a potential decline unnoticed. Precision@50 is the primary metric because it measures the quality of the finite shortlist.
 
 ## Data
 
